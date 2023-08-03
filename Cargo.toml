@@ -8,3 +8,17 @@ edition = "2021"
 [dependencies]
 actix-web = "4"
 lightning-cluster = "0.1.0"
+sqlx = { version = "0.7", features = [ "runtime-tokio", "tls-native-tls", "postgres" ] }
+hmac = "0.11"
+sha2 = "0.9"
+hex = "0.4"
+dotenvy = "0.15.7"
+tokio = "1.29.1"
+
+[dependencies.uuid]
+version = "1.4.1"
+features = [
+    "v4",                # Lets you generate random UUIDs
+    "fast-rng",          # Use a faster (but still sufficiently random) RNG
+    "macro-diagnostics", # Enable better diagnostics for compile-time UUIDs
+]

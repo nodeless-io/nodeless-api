@@ -5,6 +5,7 @@ pub mod models;
 pub mod repositories;
 pub mod services;
 pub mod middleware;
+pub mod helpers;
 
 #[get("/")]
 async fn hello() -> impl Responder {
