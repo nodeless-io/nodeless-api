@@ -5,7 +5,7 @@ use crate::{
     repositories::user_repository::{CreateUser, UserRepository, UserRepositoryError},
 };
 
-use super::crypto::sha256_hmac;
+use super::{crypto::sha256_hmac, format::random_text};
 
 pub async fn create_test_pool() -> PgPool {
     let pool = PgPool::connect(dotenvy::var("DATABASE_URL").unwrap().as_str())
@@ -17,9 +17,9 @@ pub async fn create_test_pool() -> PgPool {
 pub async fn create_test_user() -> Result<User, UserRepositoryError> {
     let pool = create_test_pool().await;
     let user_repo = UserRepository::new(pool.clone());
-
+    let random = random_text(10).await;
     let test_user = CreateUser {
-        email: Some(String::from("test@test.com")),
+        email: Some(String::from(format!("{}@nodeless.io", random))),
         password: Some(sha256_hmac(
             "password",
             dotenvy::var("APP_KEY").unwrap().as_str(),

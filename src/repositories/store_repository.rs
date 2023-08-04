@@ -126,7 +126,7 @@ impl StoreInvoiceRepository {
             "INSERT INTO store_invoices 
             (store_uuid, checkout_uuid, metadata)
             VALUES 
-            ($1, $2, $3, $4, $5, $6) RETURNING *"
+            ($1, $2, $3, $4, $5, $6) RETURNING *",
         )
         .bind(&uuid)
         .bind(invoice.store_uuid)

@@ -13,7 +13,7 @@ pub struct Checkout {
     pub expiry_seconds: i64,
     pub created_at: chrono::NaiveDateTime,
     pub updated_at: chrono::NaiveDateTime,
-    pub expired_at: chrono::NaiveDateTime,
+    pub expired_at: Option<chrono::NaiveDateTime>,
     pub deleted_at: Option<chrono::NaiveDateTime>,
 }
 

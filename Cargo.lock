@@ -1615,6 +1615,7 @@ dependencies = [
  "jsonwebtoken",
  "lightning-cluster",
  "moka",
+ "rand",
  "serde",
  "serde_derive",
  "serde_json",

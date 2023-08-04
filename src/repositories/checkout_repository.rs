@@ -58,7 +58,11 @@ impl CheckoutRepository {
         Ok(checkout)
     }
 
-    pub async fn set_status(&self, uuid: &str, status: CheckoutStatus) -> Result<Checkout, sqlx::Error> {
+    pub async fn set_status(
+        &self,
+        uuid: &str,
+        status: CheckoutStatus,
+    ) -> Result<Checkout, sqlx::Error> {
         let checkout = sqlx::query_as::<_, Checkout>(
             r#"
             UPDATE checkouts SET status = $1 WHERE uuid = $2
@@ -75,7 +79,10 @@ impl CheckoutRepository {
 
 #[cfg(test)]
 mod tests {
-    use crate::{helpers::tests::{create_test_pool, create_test_user, delete_test_user}, repositories::store_repository::StoreRepository};
+    use crate::{
+        helpers::tests::{create_test_pool, create_test_user, delete_test_user},
+        repositories::store_repository::StoreRepository,
+    };
 
     use super::{CheckoutRepository, CreateCheckout};
 
@@ -97,11 +104,14 @@ mod tests {
             payment_request: "test payment request".to_string(),
             expiry_seconds: 100,
         };
-        
+
         let checkout = checkout_repo.create(checkout).await.unwrap();
         assert_eq!(checkout.user_uuid, user_clone.uuid);
 
-        let _ = store_repo.hard_delete(&user_clone.uuid, &store_clone.uuid).await.unwrap();
+        let _ = store_repo
+            .hard_delete(&user_clone.uuid, &store_clone.uuid)
+            .await
+            .unwrap();
 
         sqlx::query!(
             r#"
@@ -109,11 +119,10 @@ mod tests {
             "#,
             checkout.uuid
         )
-        .execute(&pool).await.unwrap();
+        .execute(&pool)
+        .await
+        .unwrap();
 
         let _ = delete_test_user(&user_clone.uuid).await.unwrap();
-        
     }
 }
-
-
