@@ -6,6 +6,7 @@ pub struct AppConfig {
     pub pricing: PricingConfig,
     pub stores: StoresConfig,
     pub donation_pages: DonationPagesConfig,
+    pub rate_limiter: RateLimiterConfig,
 }
 
 impl From<toml::Value> for AppConfig {
@@ -14,6 +15,7 @@ impl From<toml::Value> for AppConfig {
         let pricing = value.get("pricing").unwrap();
         let stores = value.get("stores").unwrap();
         let donation_pages = value.get("donation_pages").unwrap();
+        let rate_limiter = value.get("rate_limiter").unwrap();
 
         AppConfig {
             auth: AuthConfig {
@@ -62,6 +64,29 @@ impl From<toml::Value> for AppConfig {
                     .as_integer()
                     .unwrap() as u32,
             },
+            rate_limiter: RateLimiterConfig {
+                api_requests_per_second: rate_limiter
+                    .get("api_requests_per_second")
+                    .unwrap()
+                    .as_integer()
+                    .unwrap() as u32,
+                api_requests_per_minute: rate_limiter
+                    .get("api_requests_per_minute")
+                    .unwrap()
+                    .as_integer()
+                    .unwrap() as u32,
+                checkout_requests_per_minute: rate_limiter
+                    .get("checkout_requests_per_minute")
+                    .unwrap()
+                    .as_integer()
+                    .unwrap() as u32,
+                auth_requests_per_hour: rate_limiter
+                    .get("auth_requests_per_hour")
+                    .unwrap()
+                    .as_integer()
+                    .unwrap() as u32,
+            },
+
         }
     }
 }
@@ -90,4 +115,12 @@ pub struct StoresConfig {
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct DonationPagesConfig {
     pub max_donation_pages_per_user: u32,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct RateLimiterConfig {
+    pub api_requests_per_second: u32,
+    pub api_requests_per_minute: u32,
+    pub checkout_requests_per_minute: u32,
+    pub auth_requests_per_hour: u32,
 }

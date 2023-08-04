@@ -24,6 +24,8 @@ jsonwebtoken = "7.1"
 toml = "0.5.8"
 futures = "0.3.28"
 futures-util = "0.3.28"
+moka = { version = "0.11", features = ["future"] }
+async-trait = "0.1.72"
 
 [dependencies.uuid]
 version = "1.4.1"

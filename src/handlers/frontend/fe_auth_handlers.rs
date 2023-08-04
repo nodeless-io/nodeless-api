@@ -1,10 +1,10 @@
 use crate::{
     config::AppConfig,
     helpers::{crypto::sha256_hmac, format::ErrorResponse},
-    middleware::jwt_middleware::generate_jwt_token,
+    middleware::{jwt_middleware::generate_jwt_token, limiter_middleware::{GuestLimiter, guest_limiter}},
     repositories::user_repository::UserRepository,
 };
-use actix_web::{web, HttpResponse, Responder, ResponseError};
+use actix_web::{web, HttpResponse, Responder, ResponseError, HttpRequest};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
@@ -30,6 +30,8 @@ pub enum LoginError {
     WeakPassword,
     #[error("Login method is disabled.")]
     LoginMethodDisabled,
+    #[error("Too many requests")]
+    TooManyRequests,
 }
 
 impl ResponseError for LoginError {
@@ -50,6 +52,9 @@ impl ResponseError for LoginError {
             LoginError::LoginMethodDisabled => HttpResponse::BadRequest().json(ErrorResponse {
                 error: self.to_string(),
             }),
+            LoginError::TooManyRequests => HttpResponse::TooManyRequests().json(ErrorResponse {
+                error: self.to_string(),
+            }),
         }
     }
 }
@@ -60,11 +65,19 @@ pub struct JwtResponse {
 }
 
 pub async fn email(
-    req: web::Json<EmailLoginReq>,
+    data: web::Json<EmailLoginReq>,
+    req: HttpRequest,
     user_repo: web::Data<UserRepository>,
     config: web::Data<AppConfig>,
+    limiter: web::Data<GuestLimiter>,
 ) -> Result<HttpResponse, LoginError> {
-    let login_data = req.into_inner();
+    let login_data = data.into_inner();
+
+    let limit = guest_limiter(&req, limiter, config.rate_limiter.auth_requests_per_hour).await;
+
+    if !limit {
+        return Err(LoginError::TooManyRequests);
+    }
 
     if !config.auth.enable_email_auth {
         return Err(LoginError::LoginMethodDisabled);
