@@ -1,4 +1,3 @@
-
 use actix_web::{dev, Error, FromRequest, HttpRequest};
 use futures::future::{ready, Ready};
 use jsonwebtoken::{decode, encode, Algorithm, DecodingKey, EncodingKey, Header, Validation};
@@ -51,7 +50,6 @@ pub fn verify_jwt_token(
     )?;
     Ok(token_data)
 }
-
 
 pub struct AuthorizationService {
     user_uuid: Option<String>,

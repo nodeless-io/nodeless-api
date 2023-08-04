@@ -1,10 +1,8 @@
 use crate::{
     config::AppConfig,
-    helpers::{
-        crypto::sha256_hmac,
-        format::ErrorResponse,
-    },
-    repositories::user_repository::UserRepository, middleware::jwt_middleware::generate_jwt_token,
+    helpers::{crypto::sha256_hmac, format::ErrorResponse},
+    middleware::jwt_middleware::generate_jwt_token,
+    repositories::user_repository::UserRepository,
 };
 use actix_web::{web, HttpResponse, Responder, ResponseError};
 use serde::{Deserialize, Serialize};

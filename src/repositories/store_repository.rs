@@ -1,4 +1,3 @@
-
 use sqlx::{Error, PgPool};
 use uuid::Uuid;
 
@@ -34,7 +33,7 @@ impl StoreRepository {
 
     pub async fn get_all(&self, user_uuid: &str) -> Result<Vec<Store>, Error> {
         let stores = sqlx::query_as::<_, Store>(
-            "SELECT * FROM stores WHERE user_uuid = $1 AND deleted_at IS NULL"
+            "SELECT * FROM stores WHERE user_uuid = $1 AND deleted_at IS NULL",
         )
         .bind(user_uuid)
         .fetch_all(&self.pool)
@@ -43,9 +42,13 @@ impl StoreRepository {
         Ok(stores)
     }
 
-    pub async fn get_by_uuid(&self, user_uuid: &str, store_uuid: &str) -> Result<Option<Store>, Error> {
+    pub async fn get_by_uuid(
+        &self,
+        user_uuid: &str,
+        store_uuid: &str,
+    ) -> Result<Option<Store>, Error> {
         let store = sqlx::query_as::<_, Store>(
-            "SELECT * FROM stores WHERE uuid = $1 AND user_uuid = $2 AND deleted_at IS NULL"
+            "SELECT * FROM stores WHERE uuid = $1 AND user_uuid = $2 AND deleted_at IS NULL",
         )
         .bind(store_uuid)
         .bind(user_uuid)
@@ -55,7 +58,12 @@ impl StoreRepository {
         Ok(store)
     }
 
-    pub async fn update(&self, user_uuid: &str, store_uuid: &str, name: &str) -> Result<Option<Store>, Error> {
+    pub async fn update(
+        &self,
+        user_uuid: &str,
+        store_uuid: &str,
+        name: &str,
+    ) -> Result<Option<Store>, Error> {
         let now = chrono::Local::now().naive_utc();
 
         let store = sqlx::query_as::<_, Store>(

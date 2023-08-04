@@ -1,17 +1,9 @@
-use actix_web::{
-    get,
-    middleware::Logger,
-    post,
-    web::{self, Data},
-    App, HttpResponse, HttpServer, Responder,
-};
-use config::AppConfig;
-use handlers::frontend::fe_auth_handlers::configure_routes;
-use repositories::{user_repository::UserRepository, store_repository::StoreRepository};
+use actix_web::{middleware::Logger, web::Data, App, HttpServer};
+use handlers::frontend::*;
+use repositories::{store_repository::StoreRepository, user_repository::UserRepository};
 use sqlx::PgPool;
 use std::fs::read_to_string;
 use toml::Value;
-use handlers::frontend::*;
 
 pub mod config;
 pub mod handlers;
