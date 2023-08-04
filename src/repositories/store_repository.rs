@@ -93,4 +93,70 @@ impl StoreRepository {
 
         Ok(store.rows_affected() > 0)
     }
+
+    pub async fn hard_delete(&self, user_uuid: &str, store_uuid: &str) -> Result<bool, Error> {
+        let store = sqlx::query(
+            "DELETE FROM stores WHERE uuid = $1 AND user_uuid = $2"
+        )
+        .bind(store_uuid)
+        .bind(user_uuid)
+        .execute(&self.pool)
+        .await?;
+
+        Ok(store.rows_affected() > 0)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::helpers::tests::{create_test_user, create_test_pool, delete_test_user};
+
+    use super::StoreRepository;
+
+    #[tokio::test]
+    async fn test_store_crud() {
+        let user = create_test_user().await.unwrap();
+        let pool = create_test_pool().await;
+        let store_repo = StoreRepository::new(pool);
+        let store = store_repo.create(&user.uuid, "test store").await.unwrap();
+
+        assert_eq!(store.user_uuid, user.uuid);
+        assert_eq!(store.name, "test store");
+
+        let store = store_repo
+            .get_by_uuid(&user.uuid, &store.uuid)
+            .await
+            .unwrap()
+            .unwrap();
+
+        assert_eq!(store.user_uuid, user.uuid);
+        assert_eq!(store.name, "test store");
+
+        let store = store_repo
+            .update(&user.uuid, &store.uuid, "test store 2")
+            .await
+            .unwrap()
+            .unwrap();
+
+        assert_eq!(store.user_uuid, user.uuid);
+        assert_eq!(store.name, "test store 2");
+
+        let soft_delete = store_repo
+            .delete(&user.uuid, &store.uuid)
+            .await
+            .unwrap();
+
+        assert_eq!(soft_delete, true);
+
+        let delete = store_repo
+            .hard_delete(&user.uuid, &store.uuid)
+            .await
+            .unwrap();
+
+        assert_eq!(delete, true);
+
+        let deleted_user = delete_test_user(&user.uuid).await.unwrap();
+
+        assert_eq!(deleted_user, true);
+    }
 }
