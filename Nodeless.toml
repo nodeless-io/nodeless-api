@@ -1,0 +1,17 @@
+[auth]
+min_password_length = 8
+require_strong_password = true
+enable_email_auth = true
+enable_nost_auth = true
+enable_identifier_auth = true
+jwt_expiry_seconds = 36000
+
+[pricing]
+base_fee_sat = 100
+fee_rate_percent = 1
+
+[stores]
+max_stores_per_user = 5
+
+[donation_pages]
+max_donation_pages_per_user = 5

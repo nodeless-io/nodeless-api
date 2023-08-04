@@ -1,7 +1,7 @@
+use crate::models::user::User;
 use sqlx::PgPool;
 use sqlx::Row;
 use thiserror::Error;
-use crate::models::user::User;
 
 #[derive(Error, Debug)]
 pub enum UserRepositoryError {

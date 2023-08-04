@@ -4,7 +4,9 @@ use uuid::Uuid;
 
 #[tokio::main]
 pub async fn main() {
-    let pool = PgPool::connect(dotenvy::var("DATABASE_URL").unwrap().as_str()).await.unwrap();
+    let pool = PgPool::connect(dotenvy::var("DATABASE_URL").unwrap().as_str())
+        .await
+        .unwrap();
     run(&pool).await.unwrap();
 }
 
@@ -24,7 +26,7 @@ async fn seed_users(pool: &PgPool) -> Result<(), sqlx::Error> {
         INSERT INTO users (uuid, email, password)
         VALUES ($1, $2, $3)
         "#,
-        uuid,  // UUID generation using the `uuid` crate
+        uuid, // UUID generation using the `uuid` crate
         "admin@nodeless.io",
         sha256_hmac("password", &hmac), // In a real-world scenario, hash the password!
     )
