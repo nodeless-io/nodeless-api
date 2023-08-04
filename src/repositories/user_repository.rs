@@ -1,7 +1,7 @@
 use crate::models::user::User;
+use sqlx::error::DatabaseError;
 use sqlx::PgPool;
 use sqlx::Row;
-use sqlx::error::DatabaseError;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -108,6 +108,4 @@ impl UserRepository {
 }
 
 #[cfg(test)]
-mod tests {
-
-}
+mod tests {}

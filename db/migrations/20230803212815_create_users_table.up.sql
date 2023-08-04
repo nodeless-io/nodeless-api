@@ -1,3 +1,7 @@
+CREATE type checkout_status as enum (
+    'new', 'pendingconfirmation', 'paid', 'overpaid', 'underpaid', 'expired'
+);
+
 CREATE TABLE users (
     uuid VARCHAR(255) UNIQUE PRIMARY KEY,
     email VARCHAR(255) UNIQUE,

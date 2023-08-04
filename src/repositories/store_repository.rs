@@ -1,7 +1,7 @@
 use sqlx::{Error, PgPool};
 use uuid::Uuid;
 
-use crate::models::store::Store;
+use crate::models::store::{Store, StoreInvoice};
 
 #[derive(Debug, Clone)]
 pub struct StoreRepository {
@@ -95,21 +95,53 @@ impl StoreRepository {
     }
 
     pub async fn hard_delete(&self, user_uuid: &str, store_uuid: &str) -> Result<bool, Error> {
-        let store = sqlx::query(
-            "DELETE FROM stores WHERE uuid = $1 AND user_uuid = $2"
-        )
-        .bind(store_uuid)
-        .bind(user_uuid)
-        .execute(&self.pool)
-        .await?;
+        let store = sqlx::query("DELETE FROM stores WHERE uuid = $1 AND user_uuid = $2")
+            .bind(store_uuid)
+            .bind(user_uuid)
+            .execute(&self.pool)
+            .await?;
 
         Ok(store.rows_affected() > 0)
     }
 }
 
+pub struct StoreInvoiceRepository {
+    pool: PgPool,
+}
+
+pub struct CreateStoreInvoice {
+    pub store_uuid: String,
+    pub checkout_uuid: String,
+    pub metadata: Option<serde_json::Value>,
+}
+
+impl StoreInvoiceRepository {
+    pub fn new(pool: PgPool) -> Self {
+        Self { pool }
+    }
+
+    pub async fn create(&self, invoice: CreateStoreInvoice) -> Result<StoreInvoice, Error> {
+        let uuid = Uuid::new_v4().to_string();
+        let invoice = sqlx::query_as::<_, StoreInvoice>(
+            "INSERT INTO store_invoices 
+            (store_uuid, checkout_uuid, metadata)
+            VALUES 
+            ($1, $2, $3, $4, $5, $6) RETURNING *"
+        )
+        .bind(&uuid)
+        .bind(invoice.store_uuid)
+        .bind(invoice.checkout_uuid)
+        .bind(invoice.metadata)
+        .fetch_one(&self.pool)
+        .await?;
+
+        Ok(invoice)
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use crate::helpers::tests::{create_test_user, create_test_pool, delete_test_user};
+    use crate::helpers::tests::{create_test_pool, create_test_user, delete_test_user};
 
     use super::StoreRepository;
 
@@ -141,10 +173,7 @@ mod tests {
         assert_eq!(store.user_uuid, user.uuid);
         assert_eq!(store.name, "test store 2");
 
-        let soft_delete = store_repo
-            .delete(&user.uuid, &store.uuid)
-            .await
-            .unwrap();
+        let soft_delete = store_repo.delete(&user.uuid, &store.uuid).await.unwrap();
 
         assert_eq!(soft_delete, true);
 
