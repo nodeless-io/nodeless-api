@@ -1,8 +1,8 @@
-use std::sync::Arc;
-use actix_web::{dev, Error, FromRequest, HttpRequest, web};
+use actix_web::{dev, web, Error, FromRequest, HttpRequest};
 use futures::future::{ready, Ready};
 use futures_util::FutureExt;
 use moka::future::Cache;
+use std::sync::Arc;
 
 use crate::helpers::crypto::sha256_hmac;
 
@@ -31,15 +31,20 @@ impl FromRequest for ApiLimiter {
                 } else {
                     api_limiter.cache.insert(token, 1).await;
                 }
-            }.boxed_local();
+            }
+            .boxed_local();
 
             if count.is_some() && count.unwrap() > 10 {
-                return ready(Err(actix_web::error::ErrorTooManyRequests("Too many requests")));
+                return ready(Err(actix_web::error::ErrorTooManyRequests(
+                    "Too many requests",
+                )));
             }
 
-           ready(Ok(api_limiter.clone()))
+            ready(Ok(api_limiter.clone()))
         } else {
-            ready(Err(actix_web::error::ErrorUnauthorized("Missing api token")))
+            ready(Err(actix_web::error::ErrorUnauthorized(
+                "Missing api token",
+            )))
         }
     }
 }
@@ -64,22 +69,28 @@ impl FromRequest for GuestLimiter {
         let count = guest_limiter.cache.get(&hashed_ip);
         async {
             if count.is_some() {
-                guest_limiter.cache.insert(hashed_ip, count.unwrap() + 1).await;
+                guest_limiter
+                    .cache
+                    .insert(hashed_ip, count.unwrap() + 1)
+                    .await;
                 eprintln!("count: {}", count.unwrap());
             } else {
                 guest_limiter.cache.insert(hashed_ip, 1).await;
                 eprintln!("count: {}", 1);
             }
-        }.boxed_local();
+        }
+        .boxed_local();
 
         if count.is_some() && count.unwrap() > 2 {
-            return ready(Err(actix_web::error::ErrorTooManyRequests("Too many requests")));
+            return ready(Err(actix_web::error::ErrorTooManyRequests(
+                "Too many requests",
+            )));
         }
         ready(Ok(guest_limiter.clone()))
-    } 
+    }
 }
 
-pub async fn guest_limiter(req: &HttpRequest, cache: web::Data::<GuestLimiter>, limit: u32) -> bool {
+pub async fn guest_limiter(req: &HttpRequest, cache: web::Data<GuestLimiter>, limit: u32) -> bool {
     let user_ip = req.connection_info().peer_addr().unwrap().to_string();
     let hashed_ip = sha256_hmac(user_ip.as_str(), dotenvy::var("APP_KEY").unwrap().as_str());
     let count = cache.cache.get(&hashed_ip);
@@ -93,4 +104,3 @@ pub async fn guest_limiter(req: &HttpRequest, cache: web::Data::<GuestLimiter>, 
     }
     true
 }
-

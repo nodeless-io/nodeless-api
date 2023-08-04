@@ -86,7 +86,6 @@ impl From<toml::Value> for AppConfig {
                     .as_integer()
                     .unwrap() as u32,
             },
-
         }
     }
 }

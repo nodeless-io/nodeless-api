@@ -1,10 +1,13 @@
 use crate::{
     config::AppConfig,
     helpers::{crypto::sha256_hmac, format::ErrorResponse},
-    middleware::{jwt_middleware::generate_jwt_token, limiter_middleware::{GuestLimiter, guest_limiter}},
+    middleware::{
+        jwt_middleware::generate_jwt_token,
+        limiter_middleware::{guest_limiter, GuestLimiter},
+    },
     repositories::user_repository::UserRepository,
 };
-use actix_web::{web, HttpResponse, Responder, ResponseError, HttpRequest};
+use actix_web::{web, HttpRequest, HttpResponse, Responder, ResponseError};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 

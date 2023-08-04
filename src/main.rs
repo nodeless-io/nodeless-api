@@ -1,11 +1,11 @@
 use actix_web::{middleware::Logger, web::Data, App, HttpServer};
 use handlers::frontend::*;
 use middleware::limiter_middleware::{ApiLimiter, GuestLimiter};
+use moka::future::Cache;
 use repositories::{store_repository::StoreRepository, user_repository::UserRepository};
 use sqlx::PgPool;
 use std::{fs::read_to_string, sync::Arc, time::Duration};
 use toml::Value;
-use moka::future::Cache;
 
 pub mod config;
 pub mod handlers;
@@ -31,8 +31,8 @@ async fn main() -> std::io::Result<()> {
     let app_config = config::AppConfig::from(toml_config);
 
     let api_limiter_cache: Cache<String, u32> = Cache::builder()
-            .time_to_live(Duration::from_secs(60))
-            .build();
+        .time_to_live(Duration::from_secs(60))
+        .build();
     let api_limiter_cache = Arc::new(api_limiter_cache);
 
     let api_limiter = ApiLimiter {
@@ -40,8 +40,8 @@ async fn main() -> std::io::Result<()> {
     };
 
     let guest_limiter_cache: Cache<String, u32> = Cache::builder()
-            .time_to_live(Duration::from_secs(3600))
-            .build();
+        .time_to_live(Duration::from_secs(3600))
+        .build();
     let guest_limiter_cache = Arc::new(guest_limiter_cache);
 
     let guest_limiter = GuestLimiter {
