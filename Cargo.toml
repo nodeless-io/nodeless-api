@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 actix-web = "4"
-lightning-cluster = "0.1.0"
+lightning-cluster = "0.1.3"
 sqlx = { version = "0.7", features = [ "runtime-tokio", "tls-native-tls", "postgres", "chrono" ] }
 hmac = "0.11"
 sha2 = "0.9"
@@ -27,6 +27,8 @@ futures-util = "0.3.28"
 moka = { version = "0.11", features = ["future"] }
 async-trait = "0.1.72"
 rand = "0.8.4"
+anyhow = "1.0.44"
+qr_code = "2.0.0"
 
 [dependencies.uuid]
 version = "1.4.1"

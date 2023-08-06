@@ -2,6 +2,7 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct AppConfig {
+    pub meta: MetaConfig,
     pub auth: AuthConfig,
     pub pricing: PricingConfig,
     pub stores: StoresConfig,
@@ -18,6 +19,9 @@ impl From<toml::Value> for AppConfig {
         let rate_limiter = value.get("rate_limiter").unwrap();
 
         AppConfig {
+            meta: MetaConfig {
+                name: value.get("name").unwrap().as_str().unwrap().to_string(),
+            },
             auth: AuthConfig {
                 min_password_length: auth
                     .get("min_password_length")
@@ -98,6 +102,11 @@ pub struct AuthConfig {
     pub enable_nost_auth: bool,
     pub enable_identifier_auth: bool,
     pub jwt_expiry_seconds: u64,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct MetaConfig {
+    pub name: String,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]

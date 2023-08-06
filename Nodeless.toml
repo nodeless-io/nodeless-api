@@ -1,3 +1,6 @@
+[meta]
+name = "Nodeless.io"
+
 [auth]
 min_password_length = 8
 require_strong_password = true

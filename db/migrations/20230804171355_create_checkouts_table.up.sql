@@ -6,7 +6,7 @@ CREATE TABLE checkouts (
     amount BIGINT NOT NULL,
     status checkout_status NOT NULL,
     bitcoin_address VARCHAR(255) NOT NULL,
-    payment_request VARCHAR(255) NOT NULL,
+    payment_request TEXT NOT NULL,
     expiry_seconds BIGINT NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,

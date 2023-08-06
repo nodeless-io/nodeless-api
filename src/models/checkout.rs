@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Debug, sqlx::FromRow)]
+#[derive(Serialize, Deserialize, Debug, sqlx::FromRow, Clone)]
 pub struct Checkout {
     pub uuid: String,
     pub user_uuid: String,
@@ -17,7 +17,7 @@ pub struct Checkout {
     pub deleted_at: Option<chrono::NaiveDateTime>,
 }
 
-#[derive(Serialize, Deserialize, Debug, sqlx::Type)]
+#[derive(Serialize, Deserialize, Debug, sqlx::Type, Clone)]
 #[sqlx(type_name = "checkout_status", rename_all = "lowercase")]
 pub enum CheckoutStatus {
     New,

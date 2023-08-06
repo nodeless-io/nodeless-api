@@ -1,3 +1,4 @@
+use lightning_cluster::{cluster::{Node, NodeNetwork, NodeLightningImpl, NodeClient, Cluster}, lnd::LndClient};
 use sqlx::PgPool;
 
 use crate::{
@@ -39,4 +40,24 @@ pub async fn delete_test_user(uuid: &str) -> Result<bool, UserRepositoryError> {
 
     let result = user_repo.hard_delete(uuid).await?;
     Ok(result)
+}
+
+pub async fn create_test_cluster() -> Cluster {
+    let node1 = Node {
+        pubkey: dotenvy::var("NODE1_PUBKEY").unwrap(),
+        ip: dotenvy::var("NODE1_IP").unwrap(),
+        port: dotenvy::var("NODE1_PORT").unwrap(),
+        network: NodeNetwork::Testnet,
+        lightning_impl: NodeLightningImpl::Lnd,
+        client: NodeClient::Lnd(LndClient::new(
+            dotenvy::var("NODE1_HOST").unwrap(),
+            dotenvy::var("NODE1_CERT_PATH").unwrap(),
+            dotenvy::var("NODE1_MACAROON_PATH").unwrap(),
+        )),
+    };
+
+    let nodes = vec![node1];
+    let cluster = Cluster::new(nodes);
+
+    cluster
 }

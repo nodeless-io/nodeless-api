@@ -1425,9 +1425,9 @@ dependencies = [
 
 [[package]]
 name = "lightning-cluster"
-version = "0.1.0"
+version = "0.1.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5fa24a3b0c46a2f4513e4b18eb0e40f6dce49c4b3a946a2fcd9f9414d6454479"
+checksum = "49c8d84720a50d44b4b190c17ed59c1b3c3c585a898c683ad079b64270614fe1"
 dependencies = [
  "anyhow",
  "base64 0.13.1",
@@ -1604,6 +1604,7 @@ name = "nodeless-api"
 version = "0.1.0"
 dependencies = [
  "actix-web",
+ "anyhow",
  "async-trait",
  "chrono",
  "dotenvy",
@@ -1615,6 +1616,7 @@ dependencies = [
  "jsonwebtoken",
  "lightning-cluster",
  "moka",
+ "qr_code",
  "rand",
  "serde",
  "serde_derive",
@@ -1932,6 +1934,12 @@ dependencies = [
  "memchr",
  "unicase",
 ]
+
+[[package]]
+name = "qr_code"
+version = "2.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "43d2564aae5faaf3acb512b35b8bcb9a298d9d8c72d181c598691d800ee78a00"
 
 [[package]]
 name = "quanta"
