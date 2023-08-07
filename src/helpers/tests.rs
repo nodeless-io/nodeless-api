@@ -1,4 +1,7 @@
-use lightning_cluster::{cluster::{Node, NodeNetwork, NodeLightningImpl, NodeClient, Cluster}, lnd::LndClient};
+use lightning_cluster::{
+    cluster::{Cluster, Node, NodeClient, NodeLightningImpl, NodeNetwork},
+    lnd::LndClient,
+};
 use sqlx::PgPool;
 
 use crate::{

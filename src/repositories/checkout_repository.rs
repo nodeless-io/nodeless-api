@@ -2,14 +2,13 @@ use sqlx::PgPool;
 
 use crate::models::checkout::{Checkout, CheckoutStatus};
 
+#[derive(Clone)]
 pub struct CheckoutRepository {
     pub pool: PgPool,
 }
 
 pub struct CreateCheckout {
     pub user_uuid: String,
-    pub parent_uuid: String,
-    pub parent_type: String,
     pub amount: i64,
     pub bitcoin_address: String,
     pub payment_request: String,
@@ -25,15 +24,13 @@ impl CheckoutRepository {
         let uuid = uuid::Uuid::new_v4().to_string();
         let checkout = sqlx::query_as::<_, Checkout>(
             r#"
-            INSERT INTO checkouts (uuid, user_uuid, parent_uuid, parent_type, amount, status, bitcoin_address, payment_request, expiry_seconds)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+            INSERT INTO checkouts (uuid, user_uuid, amount, status, bitcoin_address, payment_request, expiry_seconds)
+            VALUES ($1, $2, $3, $4, $5, $6, $7)
             RETURNING *
             "#,
         )
         .bind(uuid)
         .bind(req.user_uuid)
-        .bind(req.parent_uuid)
-        .bind(req.parent_type)
         .bind(req.amount)
         .bind(CheckoutStatus::New)
         .bind(req.bitcoin_address)
@@ -97,8 +94,6 @@ mod tests {
         let store_clone = store.clone();
         let checkout = CreateCheckout {
             user_uuid: user.uuid,
-            parent_uuid: store.uuid,
-            parent_type: "store".to_string(),
             amount: 100,
             bitcoin_address: "test address".to_string(),
             payment_request: "test payment request".to_string(),

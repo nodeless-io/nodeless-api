@@ -10,7 +10,7 @@ pub struct Store {
     pub deleted_at: Option<chrono::NaiveDateTime>,
 }
 
-#[derive(Serialize, Deserialize, Debug, sqlx::FromRow)]
+#[derive(Serialize, Deserialize, Debug, sqlx::FromRow, Clone)]
 pub struct StoreInvoice {
     pub uuid: String,
     pub store_uuid: String,

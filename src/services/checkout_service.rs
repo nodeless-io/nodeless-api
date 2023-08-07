@@ -1,6 +1,12 @@
+use crate::{
+    models::checkout::Checkout,
+    repositories::checkout_repository::{CheckoutRepository, CreateCheckout},
+};
 use anyhow::Result;
-use lightning_cluster::{cluster::{Cluster, ClusterAddInvoice}, lnd::AddInvoiceResponse};
-use crate::{models::checkout::Checkout, repositories::checkout_repository::{CheckoutRepository, CreateCheckout}};
+use lightning_cluster::{
+    cluster::{Cluster, ClusterAddInvoice},
+    lnd::AddInvoiceResponse,
+};
 use tokio::try_join;
 pub struct CheckoutService {
     pub cluster: Cluster,
@@ -9,8 +15,6 @@ pub struct CheckoutService {
 #[derive(Debug, Clone)]
 pub struct CreateCheckoutService {
     pub user_uuid: String,
-    pub parent_uuid: String,
-    pub parent_type: String,
     pub amount: i64,
     pub expiry: i64,
     pub memo: Option<String>,
@@ -29,41 +33,41 @@ impl CheckoutService {
         Self { cluster }
     }
 
-    pub async fn create(&self, data: CreateCheckoutService, repo: CheckoutRepository) -> Result<CheckoutResponse> {
+    pub async fn create(
+        &self,
+        data: CreateCheckoutService,
+        repo: CheckoutRepository,
+    ) -> Result<CheckoutResponse> {
         // Fetch get_ln_pr and get_bitcoin_addr concurrently
-        let (ln_pr, bitcoin_addr) = try_join!(
-            self.get_ln_pr(data.clone()),
-            self.get_bitcoin_addr()
-        )?;
-    
-        let unified = format!{"bitcoin:{}?lightning={}", bitcoin_addr, ln_pr.payment_request};
-    
+        let (ln_pr, bitcoin_addr) =
+            try_join!(self.get_ln_pr(data.clone()), self.get_bitcoin_addr())?;
+
+        let unified = format! {"bitcoin:{}?lightning={}", bitcoin_addr, ln_pr.payment_request};
+
         // Generate all three QR codes concurrently
         let (qr_unified, qr_bitcoin, qr_ln) = try_join!(
             self.get_qr(&unified),
             self.get_qr(&bitcoin_addr),
             self.get_qr(&ln_pr.payment_request)
         )?;
-    
+
         let create_checkout = CreateCheckout {
             user_uuid: data.user_uuid,
-            parent_uuid: data.parent_uuid,
-            parent_type: data.parent_type,
             amount: data.amount,
             bitcoin_address: bitcoin_addr,
             payment_request: ln_pr.payment_request,
             expiry_seconds: data.expiry,
         };
-    
+
         let checkout = repo.create(create_checkout).await?;
-    
+
         let response = CheckoutResponse {
             checkout: checkout,
             qr_unified: qr_unified,
             qr_bitcoin: qr_bitcoin,
             qr_ln: qr_ln,
         };
-    
+
         Ok(response)
     }
 
@@ -104,7 +108,14 @@ mod tests {
     use lightning_cluster::cluster::Cluster;
     use sqlx::pool;
 
-    use crate::{repositories::{checkout_repository::CheckoutRepository, store_repository::{StoreRepository, StoreInvoiceRepository, CreateStoreInvoice}}, services::checkout_service::{CreateCheckoutService, CheckoutService}, helpers::tests::{create_test_cluster, create_test_pool, create_test_user}};
+    use crate::{
+        helpers::tests::{create_test_cluster, create_test_pool, create_test_user},
+        repositories::{
+            checkout_repository::CheckoutRepository,
+            store_repository::{CreateStoreInvoice, StoreInvoiceRepository, StoreRepository},
+        },
+        services::checkout_service::{CheckoutService, CreateCheckoutService},
+    };
 
     #[tokio::test]
     pub async fn test_create_checkout_service() {
@@ -114,18 +125,20 @@ mod tests {
         let store = StoreRepository::new(pool.clone());
         let store = store.create(&user.uuid, "test store").await.unwrap();
         let invoice_repo = StoreInvoiceRepository::new(pool.clone());
-        
+
         let service = CheckoutService::new(cluster);
         let data = CreateCheckoutService {
             user_uuid: user.uuid,
-            parent_uuid: String::from(""),
-            parent_type: String::from(""),
             amount: 1000,
             expiry: 3600,
             memo: None,
         };
         let repo = CheckoutRepository::new(pool);
         let response = service.create(data, repo).await.unwrap();
-        println!("{:?}", response);
+        
+        assert_eq!(response.checkout.amount, 1000);
+        assert_eq!(response.checkout.expiry_seconds, 3600);
+        assert!(response.checkout.bitcoin_address.len() > 0);
+        assert!(response.checkout.payment_request.len() > 0);
     }
 }

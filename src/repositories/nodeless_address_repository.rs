@@ -24,7 +24,10 @@ impl NodelessAddressRepository {
         Self { pool }
     }
 
-    pub async fn create(&self, addr: CreateNodelessAddress) -> Result<NodelessAddress, sqlx::Error>  {
+    pub async fn create(
+        &self,
+        addr: CreateNodelessAddress,
+    ) -> Result<NodelessAddress, sqlx::Error> {
         let uuid = Uuid::new_v4().to_string();
 
         let addr = sqlx::query_as::<_, NodelessAddress>(
@@ -73,7 +76,11 @@ impl NodelessAddressRepository {
         Ok(addr)
     }
 
-    pub async fn update(&self, uuid: &str, data: UpdateNodelessAddress) -> Result<NodelessAddress, sqlx::Error> {
+    pub async fn update(
+        &self,
+        uuid: &str,
+        data: UpdateNodelessAddress,
+    ) -> Result<NodelessAddress, sqlx::Error> {
         let addr = sqlx::query_as::<_, NodelessAddress>(
             r#"
             UPDATE nodeless_addresses
@@ -97,7 +104,8 @@ impl NodelessAddressRepository {
             UPDATE nodeless_addresses SET deleted_at = NOW()
             WHERE uuid = $1
             "#,
-        ).bind(uuid)
+        )
+        .bind(uuid)
         .execute(&self.pool)
         .await?;
 
@@ -110,7 +118,8 @@ impl NodelessAddressRepository {
             DELETE FROM nodeless_addresses
             WHERE uuid = $1
             "#,
-        ).bind(uuid)
+        )
+        .bind(uuid)
         .execute(&self.pool)
         .await?;
 
@@ -130,12 +139,15 @@ pub mod tests {
 
         let repo = super::NodelessAddressRepository::new(pool.clone());
 
-        let addr = repo.create(super::CreateNodelessAddress {
-            user_uuid: user.uuid,
-            handle: "test".to_string(),
-            npub: None,
-            price: 0,
-        }).await.unwrap();
+        let addr = repo
+            .create(super::CreateNodelessAddress {
+                user_uuid: user.uuid,
+                handle: "test".to_string(),
+                npub: None,
+                price: 0,
+            })
+            .await
+            .unwrap();
 
         assert_eq!(&addr.user_uuid, &user_clone.uuid);
         assert_eq!(addr.handle, "test");
@@ -156,10 +168,16 @@ pub mod tests {
         assert_eq!(addr.npub, None);
         assert_eq!(addr.price, 0);
 
-        let addr = repo.update(&addr.uuid, super::UpdateNodelessAddress {
-            npub: Some("test".to_string()),
-            price: Some(100),
-        }).await.unwrap();
+        let addr = repo
+            .update(
+                &addr.uuid,
+                super::UpdateNodelessAddress {
+                    npub: Some("test".to_string()),
+                    price: Some(100),
+                },
+            )
+            .await
+            .unwrap();
 
         assert_eq!(&addr.user_uuid, &user_clone.uuid);
         assert_eq!(addr.handle, "test");

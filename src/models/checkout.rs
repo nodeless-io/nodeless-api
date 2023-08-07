@@ -4,8 +4,6 @@ use serde::{Deserialize, Serialize};
 pub struct Checkout {
     pub uuid: String,
     pub user_uuid: String,
-    pub parent_uuid: String,
-    pub parent_type: String,
     pub amount: i64,
     pub status: CheckoutStatus,
     pub bitcoin_address: String,

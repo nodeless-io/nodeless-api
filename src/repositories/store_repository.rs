@@ -124,9 +124,9 @@ impl StoreInvoiceRepository {
         let uuid = Uuid::new_v4().to_string();
         let invoice = sqlx::query_as::<_, StoreInvoice>(
             "INSERT INTO store_invoices 
-            (store_uuid, checkout_uuid, metadata)
+            (uuid, store_uuid, checkout_uuid, metadata)
             VALUES 
-            ($1, $2, $3, $4, $5, $6) RETURNING *",
+            ($1, $2, $3, $4) RETURNING *",
         )
         .bind(&uuid)
         .bind(invoice.store_uuid)
