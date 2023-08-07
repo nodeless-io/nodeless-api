@@ -2,12 +2,14 @@ use crate::{
     models::checkout::Checkout,
     repositories::checkout_repository::{CheckoutRepository, CreateCheckout},
 };
+use std::fs;
 use anyhow::Result;
 use lightning_cluster::{
     cluster::{Cluster, ClusterAddInvoice},
     lnd::AddInvoiceResponse,
 };
 use tokio::try_join;
+
 pub struct CheckoutService {
     pub cluster: Cluster,
 }
@@ -38,17 +40,15 @@ impl CheckoutService {
         data: CreateCheckoutService,
         repo: CheckoutRepository,
     ) -> Result<CheckoutResponse> {
-        // Fetch get_ln_pr and get_bitcoin_addr concurrently
         let (ln_pr, bitcoin_addr) =
             try_join!(self.get_ln_pr(data.clone()), self.get_bitcoin_addr())?;
 
         let unified = format! {"bitcoin:{}?lightning={}", bitcoin_addr, ln_pr.payment_request};
 
-        // Generate all three QR codes concurrently
-        let (qr_unified, qr_bitcoin, qr_ln) = try_join!(
-            self.get_qr(&unified),
-            self.get_qr(&bitcoin_addr),
-            self.get_qr(&ln_pr.payment_request)
+        let (unified_qr, bitcoin_qr, ln_qr) = try_join!(
+            Self::get_qr(unified.as_str()),
+            Self::get_qr(bitcoin_addr.as_str()),
+            Self::get_qr(ln_pr.payment_request.as_str())
         )?;
 
         let create_checkout = CreateCheckout {
@@ -63,9 +63,9 @@ impl CheckoutService {
 
         let response = CheckoutResponse {
             checkout: checkout,
-            qr_unified: qr_unified,
-            qr_bitcoin: qr_bitcoin,
-            qr_ln: qr_ln,
+            qr_unified: unified_qr,
+            qr_bitcoin: bitcoin_qr,
+            qr_ln: ln_qr,
         };
 
         Ok(response)
@@ -96,24 +96,22 @@ impl CheckoutService {
         Ok(addr)
     }
 
-    async fn get_qr(&self, str: &str) -> Result<String> {
-        let qr_code = qr_code::QrCode::new(str);
-
-        Ok(qr_code?.to_string(false, 3))
+    async fn get_qr(url: &str) -> Result<String> {
+        let qr_name = format!("/tmp/{}.png", &url[..6]);
+        qrcode_gen::qr_image(url, qr_name.as_str());
+        let buffer = fs::read(qr_name.as_str())?;
+        let base64_image = base64::encode(&buffer);
+        fs::remove_file(qr_name)?;
+        Ok(format!("data:image/png;base64,{}", base64_image))
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use lightning_cluster::cluster::Cluster;
-    use sqlx::pool;
-
     use crate::{
         helpers::tests::{create_test_cluster, create_test_pool, create_test_user},
-        repositories::{
+        repositories::
             checkout_repository::CheckoutRepository,
-            store_repository::{CreateStoreInvoice, StoreInvoiceRepository, StoreRepository},
-        },
         services::checkout_service::{CheckoutService, CreateCheckoutService},
     };
 
@@ -122,9 +120,6 @@ mod tests {
         let cluster = create_test_cluster().await;
         let pool = create_test_pool().await;
         let user = create_test_user().await.unwrap();
-        let store = StoreRepository::new(pool.clone());
-        let store = store.create(&user.uuid, "test store").await.unwrap();
-        let invoice_repo = StoreInvoiceRepository::new(pool.clone());
 
         let service = CheckoutService::new(cluster);
         let data = CreateCheckoutService {

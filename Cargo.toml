@@ -28,7 +28,8 @@ moka = { version = "0.11", features = ["future"] }
 async-trait = "0.1.72"
 rand = "0.8.4"
 anyhow = "1.0.44"
-qr_code = "2.0.0"
+qrcode_gen = "0.1.1"
+base64 = "0.13.0"
 
 [dependencies.uuid]
 version = "1.4.1"

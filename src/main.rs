@@ -1,8 +1,9 @@
 use actix_web::{middleware::Logger, web::Data, App, HttpServer};
 use handlers::frontend::*;
+use lightning_cluster::{cluster::{Node, NodeNetwork, NodeLightningImpl, NodeClient, Cluster}, lnd::LndClient};
 use middleware::limiter_middleware::{ApiLimiter, GuestLimiter};
 use moka::future::Cache;
-use repositories::{store_repository::StoreRepository, user_repository::UserRepository};
+use repositories::{store_repository::{StoreRepository, StoreInvoiceRepository}, user_repository::UserRepository, checkout_repository::CheckoutRepository};
 use sqlx::PgPool;
 use std::{fs::read_to_string, sync::Arc, time::Duration};
 use toml::Value;
@@ -17,12 +18,13 @@ pub mod services;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    std::env::set_var("RUST_LOG", "debug");
     let pool = PgPool::connect(dotenvy::var("DATABASE_URL").unwrap().as_str())
         .await
         .unwrap();
     let user_repo = UserRepository::new(pool.clone());
     let store_repo = StoreRepository::new(pool.clone());
+    let store_invoice_repo = StoreInvoiceRepository::new(pool.clone());
+    let checkout_repository = CheckoutRepository::new(pool.clone());
     let config_content = read_to_string("Nodeless.toml").expect("Failed to read Nodeless.toml");
     let toml_config: Value = config_content
         .parse()
@@ -48,8 +50,6 @@ async fn main() -> std::io::Result<()> {
         cache: guest_limiter_cache,
     };
 
-    env_logger::init_from_env(env_logger::Env::new().default_filter_or("info"));
-
     HttpServer::new(move || {
         App::new()
             .app_data(Data::new(user_repo.clone()))
@@ -57,6 +57,8 @@ async fn main() -> std::io::Result<()> {
             .app_data(Data::new(app_config.clone()))
             .app_data(Data::new(api_limiter.clone()))
             .app_data(Data::new(guest_limiter.clone()))
+            .app_data(Data::new(store_invoice_repo.clone()))
+            .app_data(Data::new(checkout_repository.clone()))
             .wrap(Logger::new("%a %{User-Agent}i"))
             .configure(fe_auth_handlers::configure_routes)
             .configure(fe_store_handlers::configure_routes)
@@ -64,4 +66,24 @@ async fn main() -> std::io::Result<()> {
     .bind(("127.0.0.1", 8080))?
     .run()
     .await
+}
+
+async fn init_cluster() -> Cluster {
+    let node1 = Node {
+        pubkey: dotenvy::var("NODE1_PUBKEY").unwrap(),
+        ip: dotenvy::var("NODE1_IP").unwrap(),
+        port: dotenvy::var("NODE1_PORT").unwrap(),
+        network: NodeNetwork::Testnet,
+        lightning_impl: NodeLightningImpl::Lnd,
+        client: NodeClient::Lnd(LndClient::new(
+            dotenvy::var("NODE1_HOST").unwrap(),
+            dotenvy::var("NODE1_CERT_PATH").unwrap(),
+            dotenvy::var("NODE1_MACAROON_PATH").unwrap(),
+        )),
+    };
+
+    let nodes = vec![node1];
+    let cluster = Cluster::new(nodes);
+
+    cluster
 }

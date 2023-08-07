@@ -105,6 +105,7 @@ impl StoreRepository {
     }
 }
 
+#[derive(Debug, Clone)]
 pub struct StoreInvoiceRepository {
     pool: PgPool,
 }

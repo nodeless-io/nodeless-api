@@ -1,8 +1,7 @@
 use anyhow::Result;
-use lightning_cluster::cluster::Cluster;
 use serde::{Deserialize, Serialize};
 
-use crate::models::checkout::{self, Checkout};
+use crate::models::checkout::Checkout;
 use crate::models::store::StoreInvoice;
 use crate::repositories::checkout_repository::CheckoutRepository;
 use crate::repositories::store_repository::{

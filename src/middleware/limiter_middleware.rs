@@ -1,4 +1,4 @@
-use actix_web::{dev, web, Error, FromRequest, HttpRequest};
+use actix_web::{web, Error, FromRequest, HttpRequest};
 use futures::future::{ready, Ready};
 use futures_util::FutureExt;
 use moka::future::Cache;

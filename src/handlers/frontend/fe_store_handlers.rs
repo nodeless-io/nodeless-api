@@ -1,16 +1,28 @@
 use crate::helpers::format::{DataResponse, ErrorResponse};
+use crate::init_cluster;
 use crate::middleware::jwt_middleware::AuthorizationService;
-use crate::repositories::store_repository::StoreRepository;
+use crate::repositories::checkout_repository::CheckoutRepository;
+use crate::repositories::store_repository::{StoreRepository, StoreInvoiceRepository};
+use crate::services::checkout_service::{CreateCheckoutService, CheckoutService};
+use crate::services::store_service::StoreService;
 use actix_web::{web, HttpResponse, Responder};
+use serde_derive::Deserialize;
 
-#[derive(Debug, serde::Deserialize)]
+#[derive(Debug, Deserialize)]
 pub struct CreateStoreReq {
     pub name: String,
 }
 
-#[derive(Debug, serde::Deserialize)]
+#[derive(Debug, Deserialize)]
 pub struct UpdateStoreReq {
     pub name: String,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct CreateStoreInvoice {
+    pub amount: i64,
+    pub expiry: i64,
+    pub memo: Option<String>,
 }
 
 pub async fn create_store(
@@ -109,6 +121,46 @@ pub async fn delete_store(
     }
 }
 
+pub async fn create_store_invoice(
+    auth: AuthorizationService,
+    data: web::Json<CreateStoreInvoice>,
+    store_uuid: web::Path<String>,
+    store_repo: web::Data<StoreRepository>,
+    checkout_repo: web::Data<CheckoutRepository>,
+    store_invoice_repo: web::Data<StoreInvoiceRepository>,
+) -> impl Responder {
+
+    let user_uuid = auth
+        .uuid()
+        .ok_or_else(|| actix_web::error::ErrorUnauthorized("User UUID not found"))
+        .unwrap();
+
+    let service = StoreService::new(
+        store_repo.get_ref().clone(),
+        checkout_repo.get_ref().clone(),
+        store_invoice_repo.get_ref().clone(),
+    );
+
+    let invoice = service.create_invoice(
+        &store_uuid,
+        None,
+        CreateCheckoutService {
+            user_uuid: user_uuid.to_string(),
+            amount: data.amount,
+            expiry: data.expiry,
+            memo: data.memo.clone(),
+        },
+        CheckoutService::new(init_cluster().await),
+    ).await;
+
+    match invoice {
+        Ok(invoice) => HttpResponse::Created().json(DataResponse { data: invoice }),
+        Err(e) => HttpResponse::InternalServerError().json(ErrorResponse {
+            error: e.to_string(),
+        }),
+    }
+}
+
 pub fn configure_routes(cfg: &mut web::ServiceConfig) {
     cfg.service(
         web::scope("/stores")
@@ -116,6 +168,7 @@ pub fn configure_routes(cfg: &mut web::ServiceConfig) {
             .route("", web::get().to(get_all_stores))
             .route("/{store_uuid}", web::get().to(get_store_by_uuid))
             .route("/{store_uuid}", web::put().to(update_store))
-            .route("/{store_uuid}", web::delete().to(delete_store)),
+            .route("/{store_uuid}", web::delete().to(delete_store))
+            .route("/{store_uuid}/invoices", web::post().to(create_store_invoice)),
     );
 }

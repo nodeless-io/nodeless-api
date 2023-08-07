@@ -12,6 +12,7 @@ pub struct AppConfig {
 
 impl From<toml::Value> for AppConfig {
     fn from(value: toml::Value) -> Self {
+        let meta = value.get("meta").unwrap();
         let auth = value.get("auth").unwrap();
         let pricing = value.get("pricing").unwrap();
         let stores = value.get("stores").unwrap();
@@ -20,7 +21,7 @@ impl From<toml::Value> for AppConfig {
 
         AppConfig {
             meta: MetaConfig {
-                name: value.get("name").unwrap().as_str().unwrap().to_string(),
+                name: meta.get("name").unwrap().as_str().unwrap().to_string(),
             },
             auth: AuthConfig {
                 min_password_length: auth

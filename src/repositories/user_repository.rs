@@ -1,5 +1,4 @@
 use crate::models::user::User;
-use sqlx::error::DatabaseError;
 use sqlx::PgPool;
 use sqlx::Row;
 use thiserror::Error;
