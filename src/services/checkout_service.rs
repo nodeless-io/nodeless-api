@@ -2,12 +2,12 @@ use crate::{
     models::checkout::Checkout,
     repositories::checkout_repository::{CheckoutRepository, CreateCheckout},
 };
-use std::fs;
 use anyhow::Result;
 use lightning_cluster::{
     cluster::{Cluster, ClusterAddInvoice},
     lnd::AddInvoiceResponse,
 };
+use std::fs;
 use tokio::try_join;
 
 pub struct CheckoutService {
@@ -110,8 +110,7 @@ impl CheckoutService {
 mod tests {
     use crate::{
         helpers::tests::{create_test_cluster, create_test_pool, create_test_user},
-        repositories::
-            checkout_repository::CheckoutRepository,
+        repositories::checkout_repository::CheckoutRepository,
         services::checkout_service::{CheckoutService, CreateCheckoutService},
     };
 
@@ -129,11 +128,16 @@ mod tests {
             memo: None,
         };
         let repo = CheckoutRepository::new(pool);
-        let response = service.create(data, repo).await.unwrap();
-        
-        assert_eq!(response.checkout.amount, 1000);
-        assert_eq!(response.checkout.expiry_seconds, 3600);
-        assert!(response.checkout.bitcoin_address.len() > 0);
-        assert!(response.checkout.payment_request.len() > 0);
+        let response = service.create(data, repo).await;
+
+        match response {
+            Ok(response) => {
+                assert_eq!(response.checkout.amount, 1000);
+                assert_eq!(response.checkout.expiry_seconds, 3600);
+                assert!(response.checkout.bitcoin_address.len() > 0);
+                assert!(response.checkout.payment_request.len() > 0);
+            }
+            Err(e) => panic!("Failed to create checkout: {:?}", e),
+        }
     }
 }

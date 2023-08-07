@@ -1,13 +1,13 @@
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 
+use super::checkout_service::{CheckoutService, CreateCheckoutService};
 use crate::models::checkout::Checkout;
 use crate::models::store::StoreInvoice;
 use crate::repositories::checkout_repository::CheckoutRepository;
 use crate::repositories::store_repository::{
     CreateStoreInvoice, StoreInvoiceRepository, StoreRepository,
 };
-use super::checkout_service::{CheckoutService, CreateCheckoutService};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CreateStoreInvoiceResponse {
@@ -70,8 +70,15 @@ impl StoreService {
 
 #[cfg(test)]
 mod tests {
-    use crate::{helpers::tests::{create_test_pool, create_test_user, create_test_cluster}, repositories::{store_repository::{StoreRepository, StoreInvoiceRepository}, checkout_repository::CheckoutRepository}, services::checkout_service::{CreateCheckoutService, CheckoutService}};
     use crate::services::store_service::StoreService;
+    use crate::{
+        helpers::tests::{create_test_cluster, create_test_pool, create_test_user},
+        repositories::{
+            checkout_repository::CheckoutRepository,
+            store_repository::{StoreInvoiceRepository, StoreRepository},
+        },
+        services::checkout_service::{CheckoutService, CreateCheckoutService},
+    };
 
     #[tokio::test]
     async fn create_store_invoice() {
@@ -80,9 +87,7 @@ mod tests {
         let cluster = create_test_cluster().await;
         let store_repo: StoreRepository = StoreRepository::new(pool.clone());
         let store = store_repo.create(&user.uuid, "Test Store").await.unwrap();
-        let metadata = Some ({
-            serde_json::json!({"test": "test"})
-        });
+        let metadata = Some({ serde_json::json!({"test": "test"}) });
 
         let checkout_service = CheckoutService::new(cluster);
 
@@ -99,11 +104,20 @@ mod tests {
             memo: None,
         };
 
-        let invoice = store_service.create_invoice(&store.uuid, metadata, checkout_data, checkout_service).await.unwrap();
+        let invoice = store_service
+            .create_invoice(&store.uuid, metadata.clone(), checkout_data, checkout_service)
+            .await;
 
-        assert!(&invoice.invoice.uuid.len() > &0);
-        assert!(&invoice.checkout.bitcoin_address.len() > &0);
-        assert!(&invoice.checkout.payment_request.len() > &0);
-
+        match invoice {
+            Ok(invoice) => {
+                assert_eq!(invoice.invoice.store_uuid, store.uuid);
+                assert_eq!(invoice.invoice.metadata, metadata);
+                assert_eq!(invoice.checkout.amount, 1000);
+                assert_eq!(invoice.checkout.expiry_seconds, 3600);
+                assert!(invoice.checkout.bitcoin_address.len() > 0);
+                assert!(invoice.checkout.payment_request.len() > 0);
+            }
+            Err(e) => panic!("Failed to create invoice: {:?}", e),
+        }
     }
 }

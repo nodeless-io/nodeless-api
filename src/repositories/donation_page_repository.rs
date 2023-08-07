@@ -3,6 +3,7 @@ use uuid::Uuid;
 
 use crate::models::donation_page::DonationPage;
 
+#[derive(Clone)]
 pub struct DonationPageRepository {
     pub pool: PgPool,
 }
@@ -20,13 +21,30 @@ pub struct UpdateDonationPage {
     pub description: String,
 }
 
+#[derive(Debug)]
+pub enum RepoError {
+    SlugTaken,
+    DbError(sqlx::Error),
+}
+
+impl From<sqlx::Error> for RepoError {
+    fn from(err: sqlx::Error) -> Self {
+        RepoError::DbError(err)
+    }
+}
+
 impl DonationPageRepository {
     pub fn new(pool: PgPool) -> Self {
         Self { pool }
     }
 
-    pub async fn create(&self, page: CreateDonationPage) -> Result<DonationPage, sqlx::Error> {
+    pub async fn create(&self, page: CreateDonationPage) -> Result<DonationPage, RepoError> {
         let uuid = Uuid::new_v4().to_string();
+
+        if self.slug_exists(&page.slug).await.unwrap() {
+            return Err(RepoError::SlugTaken);
+        }
+
         let result = sqlx::query_as::<_, DonationPage>(
             r#"
             INSERT INTO donation_pages (uuid, user_uuid, name, slug, description)
@@ -50,7 +68,7 @@ impl DonationPageRepository {
             r#"
             SELECT uuid, user_uuid, name, slug, description
             FROM donation_pages
-            WHERE uuid = $1
+            WHERE uuid = $1 AND deleted_at IS NULL
             "#,
         )
         .bind(uuid)
@@ -65,10 +83,48 @@ impl DonationPageRepository {
             r#"
             SELECT uuid, user_uuid, name, slug, description
             FROM donation_pages
-            WHERE slug = $1
+            WHERE slug = $1 AND deleted_at IS NULL
             "#,
         )
         .bind(slug)
+        .fetch_one(&self.pool)
+        .await?;
+
+        Ok(result)
+    }
+
+    pub async fn get_all_by_user_uuid(
+        &self,
+        user_uuid: &str,
+    ) -> Result<Vec<DonationPage>, sqlx::Error> {
+        let result = sqlx::query_as::<_, DonationPage>(
+            r#"
+            SELECT uuid, user_uuid, name, slug, description
+            FROM donation_pages
+            WHERE user_uuid = $1 AND deleted_at IS NULL
+            "#,
+        )
+        .bind(user_uuid)
+        .fetch_all(&self.pool)
+        .await?;
+
+        Ok(result)
+    }
+
+    pub async fn get_one_by_user_uuid(
+        &self,
+        user_uuid: &str,
+        uuid: &str,
+    ) -> Result<DonationPage, sqlx::Error> {
+        let result = sqlx::query_as::<_, DonationPage>(
+            r#"
+            SELECT uuid, user_uuid, name, slug, description
+            FROM donation_pages
+            WHERE user_uuid = $1 AND uuid = $2 AND deleted_at IS NULL
+            "#,
+        )
+        .bind(user_uuid)
+        .bind(uuid)
         .fetch_one(&self.pool)
         .await?;
 
@@ -84,7 +140,7 @@ impl DonationPageRepository {
             r#"
             UPDATE donation_pages
             SET name = $1, slug = $2, description = $3
-            WHERE uuid = $4
+            WHERE uuid = $4 AND deleted_at IS NULL
             RETURNING uuid, user_uuid, name, slug, description
             "#,
         )
@@ -92,6 +148,35 @@ impl DonationPageRepository {
         .bind(data.slug)
         .bind(data.description)
         .bind(uuid)
+        .fetch_one(&self.pool)
+        .await?;
+
+        Ok(result)
+    }
+
+    pub async fn update_by_user_uuid(
+        &self,
+        uuid: &str,
+        user_uuid: &str,
+        data: UpdateDonationPage,
+    ) -> Result<DonationPage, RepoError> {
+        if self.slug_exists(&data.slug).await.unwrap() {
+            return Err(RepoError::SlugTaken);
+        }
+
+        let result = sqlx::query_as::<_, DonationPage>(
+            r#"
+            UPDATE donation_pages
+            SET name = $1, slug = $2, description = $3
+            WHERE uuid = $4 AND user_uuid = $5 AND deleted_at IS NULL
+            RETURNING uuid, user_uuid, name, slug, description
+            "#,
+        )
+        .bind(data.name)
+        .bind(data.slug)
+        .bind(data.description)
+        .bind(uuid)
+        .bind(user_uuid)
         .fetch_one(&self.pool)
         .await?;
 
@@ -111,6 +196,20 @@ impl DonationPageRepository {
         Ok(query.rows_affected() > 0)
     }
 
+    pub async fn delete_by_user(&self, uuid: &str, user_uuid: &str) -> Result<bool, sqlx::Error> {
+        let query = sqlx::query!(
+            r#"
+            UPDATE donation_pages SET deleted_at = NOW() WHERE uuid = $1 AND user_uuid = $2
+            "#,
+            uuid,
+            user_uuid
+        )
+        .execute(&self.pool)
+        .await?;
+
+        Ok(query.rows_affected() > 0)
+    }
+
     pub async fn hard_delete(&self, uuid: &str) -> Result<bool, sqlx::Error> {
         let query = sqlx::query!(
             r#"
@@ -122,6 +221,19 @@ impl DonationPageRepository {
         .await?;
 
         Ok(query.rows_affected() > 0)
+    }
+
+    async fn slug_exists(&self, slug: &str) -> Result<bool, sqlx::Error> {
+        let result = sqlx::query!(
+            r#"
+            SELECT EXISTS(SELECT 1 FROM donation_pages WHERE slug = $1)
+            "#,
+            slug
+        )
+        .fetch_one(&self.pool)
+        .await?;
+
+        Ok(result.exists.unwrap())
     }
 }
 

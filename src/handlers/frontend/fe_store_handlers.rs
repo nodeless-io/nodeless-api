@@ -2,8 +2,8 @@ use crate::helpers::format::{DataResponse, ErrorResponse};
 use crate::init_cluster;
 use crate::middleware::jwt_middleware::AuthorizationService;
 use crate::repositories::checkout_repository::CheckoutRepository;
-use crate::repositories::store_repository::{StoreRepository, StoreInvoiceRepository};
-use crate::services::checkout_service::{CreateCheckoutService, CheckoutService};
+use crate::repositories::store_repository::{StoreInvoiceRepository, StoreRepository};
+use crate::services::checkout_service::{CheckoutService, CreateCheckoutService};
 use crate::services::store_service::StoreService;
 use actix_web::{web, HttpResponse, Responder};
 use serde_derive::Deserialize;
@@ -23,6 +23,7 @@ pub struct CreateStoreInvoice {
     pub amount: i64,
     pub expiry: i64,
     pub memo: Option<String>,
+    pub metadata: Option<serde_json::Value>,
 }
 
 pub async fn create_store(
@@ -129,7 +130,6 @@ pub async fn create_store_invoice(
     checkout_repo: web::Data<CheckoutRepository>,
     store_invoice_repo: web::Data<StoreInvoiceRepository>,
 ) -> impl Responder {
-
     let user_uuid = auth
         .uuid()
         .ok_or_else(|| actix_web::error::ErrorUnauthorized("User UUID not found"))
@@ -141,17 +141,19 @@ pub async fn create_store_invoice(
         store_invoice_repo.get_ref().clone(),
     );
 
-    let invoice = service.create_invoice(
-        &store_uuid,
-        None,
-        CreateCheckoutService {
-            user_uuid: user_uuid.to_string(),
-            amount: data.amount,
-            expiry: data.expiry,
-            memo: data.memo.clone(),
-        },
-        CheckoutService::new(init_cluster().await),
-    ).await;
+    let invoice = service
+        .create_invoice(
+            &store_uuid,
+            data.clone().metadata,
+            CreateCheckoutService {
+                user_uuid: user_uuid.to_string(),
+                amount: data.amount,
+                expiry: data.expiry,
+                memo: data.memo.clone(),
+            },
+            CheckoutService::new(init_cluster().await),
+        )
+        .await;
 
     match invoice {
         Ok(invoice) => HttpResponse::Created().json(DataResponse { data: invoice }),
@@ -169,6 +171,9 @@ pub fn configure_routes(cfg: &mut web::ServiceConfig) {
             .route("/{store_uuid}", web::get().to(get_store_by_uuid))
             .route("/{store_uuid}", web::put().to(update_store))
             .route("/{store_uuid}", web::delete().to(delete_store))
-            .route("/{store_uuid}/invoices", web::post().to(create_store_invoice)),
+            .route(
+                "/{store_uuid}/invoices",
+                web::post().to(create_store_invoice),
+            ),
     );
 }

@@ -1,13 +1,29 @@
+use crate::{
+    config,
+    handlers::frontend::{fe_auth_handlers, fe_donation_page_handlers, fe_store_handlers},
+    middleware::limiter_middleware::{ApiLimiter, GuestLimiter},
+    models::user::User,
+    repositories::{
+        checkout_repository::CheckoutRepository,
+        donation_page_repository::DonationPageRepository,
+        store_repository::{StoreInvoiceRepository, StoreRepository},
+        user_repository::{CreateUser, UserRepository, UserRepositoryError},
+    },
+};
+use actix_web::{
+    dev::{ServiceFactory, ServiceRequest},
+    middleware::Logger,
+    web::Data,
+    App, Responder,
+};
 use lightning_cluster::{
     cluster::{Cluster, Node, NodeClient, NodeLightningImpl, NodeNetwork},
     lnd::LndClient,
 };
+use moka::future::Cache;
 use sqlx::PgPool;
-
-use crate::{
-    models::user::User,
-    repositories::user_repository::{CreateUser, UserRepository, UserRepositoryError},
-};
+use std::{fs::read_to_string, sync::Arc, time::Duration};
+use toml::Value;
 
 use super::{crypto::sha256_hmac, format::random_text};
 
@@ -64,3 +80,4 @@ pub async fn create_test_cluster() -> Cluster {
 
     cluster
 }
+
